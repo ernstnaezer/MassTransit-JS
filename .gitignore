@@ -1,0 +1,7 @@
+
+/sample/ServerApp/_ReSharper.ServerApp
+/sample/ServerApp/ServerApp/bin
+/sample/ServerApp/ServerApp/obj
+/net/MassTransit.Transports.UltralightStomp/_ReSharper.MassTransit.Transports.UltralightStomp
+/net/MassTransit.Transports.UltralightStomp/bin
+/net/MassTransit.Transports.UltralightStomp/obj
