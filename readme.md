@@ -36,6 +36,10 @@ Next to that there is the SubsriptionService which is used to register a new cli
 
 And last but cerainly not least, there is the Serializer, a thin layer to convert JSON objects into strings and back again.
 	
+Example
+-------
+Check out the included example apps to see it in action. Run the *ServerApp* in Visual Studio; this will start the Stomp broker, the MT subscription service and a local servicebus. Next point your browser to the *index.html* in the *BrowserApp* directory. If you want to see the details open a javascript debugger console and watch it go. Press [enter] in the *ServerApp* console window and it will send a PingMessage to the client, you should see the pings coming in.
+
 Libraries
 ---------
 The following libraries are used to create the full stack

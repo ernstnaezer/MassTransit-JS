@@ -11,7 +11,8 @@
 var MassTransit = {}
 MassTransit._construct = function(){
 
-	function debug(str) { console.log(str); }
+	var debug = function(str) { /*console.log(str);*/ }
+	var info = function(str) { console.log(" >>> " + str); }
 
 	/**
 	 *  Masstransit servicebus client version
@@ -27,7 +28,7 @@ MassTransit._construct = function(){
 		 */
 		function init(config) {
 		
-			debug(">>>Servicebus init")
+			info("initializing the servicebus")
 		
 			this.config = config;
 			this.config.clientId =  Math.uuid().toLowerCase() ;
@@ -43,10 +44,10 @@ MassTransit._construct = function(){
 		 */		
 		function initializeTransport(){
 		
-			debug(">>>initializing message transport")
+			info("initializing message transport")
 			
 			transport.bind('ready', function () { 
-				debug(">>>message transport ready")
+				info("message transport ready")
 				localBus.trigger('ready'); 
 			});
 			transport.bind('message', function (msg) { deliver(msg); });		
@@ -57,10 +58,10 @@ MassTransit._construct = function(){
 		 *  Register a new subscription on the server and setup a local callback
 		 */			
 		function subscribe(messageName, callback) { with(this){
-			debug(">>>setting up a subscription for: " + messageName);
+			info("setting up a subscription for: " + formatMessageUrn(messageName));
 			subscriptionService.addSubscription(messageName);
-		
-			localBus.bind(messageName, callback);
+				
+			localBus.bind(formatMessageUrn(messageName), callback);
 		}}		
 		
 		/*
@@ -80,9 +81,16 @@ MassTransit._construct = function(){
 		 *	Trigger an local subscription associated with the receveid message.
 		 */
 		function deliver(env) {
-			debug(">>>message received")
-			debug(env)		
-			localBus.trigger(env.message.messageType, env.message.message);
+			info("message received:" + env.messageType[0])
+			localBus.trigger(env.messageType[0], env.message);
+		}
+		
+		/**
+		 *	Converts an .net assemblyname to a MT urn format.
+		 */
+		function formatMessageUrn(messageName){
+			var parts = messageName.split(",");
+			return "urn:message:" + parts[0].replace(".",":");
 		}
 		
 		MicroEvent.mixin(ServiceBus);
@@ -106,7 +114,7 @@ MassTransit._construct = function(){
 		 */
 		function init(config){
 		
-			debug(">>>initializing subscription service")
+			info("initializing subscription service")
 		
 			this.config = config;
 		
@@ -119,7 +127,7 @@ MassTransit._construct = function(){
 			
 			var msgReceived = function (env) {
 				if( (env.message.clientId == self.config.clientId && env.messageType[0].match("SubscriptionClientAdded$"))){
-					debug(">>>subscription ready")
+					info("subscription service ready")
 					self.trigger("ready");
 				}
 			}
@@ -198,8 +206,8 @@ MassTransit._construct = function(){
 
 			// connect to the broker
 			this.client.connect(null, null, function (frame) {
-				debug("connected to Stomp server");
-				debug("subscribing to: " + self.queue);
+				info("connected to Stomp server: " + self.websocketAddress);
+				info("subscribing to: " + self.queue);
 
 				var receiptId = Math.uuid();
 				
