@@ -5,7 +5,7 @@
 	 */
 	$(function() {
 		
-		var serviceBus = new MassTransit.ServiceBus();
+		var serviceBus = new masstransit.Servicebus();
 		serviceBus.init( { receiveFrom: "stomp://localhost:8181/client", subscriptionService: "stomp://localhost:8181/subscriptions" } );
 		
 		serviceBus.ready(function(){
@@ -13,6 +13,8 @@
 				$("#pings").append('<p>ping!</p>');
 			});
 		});
-	});
+
+		});
+
 	
 })(jQuery);

@@ -44,12 +44,11 @@ Libraries
 ---------
 The following libraries are used to create the full stack
 
-* Stomp Javascript client http://jmesnil.net/ 
-* Math.uuid.js http://www.broofa.com
-* MicroEvent.js
-* uri.js	Dominic Mitchell
-* Ultralight Stomp message broker
-* Ultralight Stomp message client
+* Stomp Javascript client 	http://jmesnil.net/ 
+* Math.uuid.js 				http://www.broofa.com
+* EventEmitter				http://github.com/pete-otaqui
+* uri.js					http://code.google.com/p/js-uri/
+* Ultralight Message Broker	http://github.com/enix/ultralight
 
 Things to do
 ------------
