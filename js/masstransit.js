@@ -9,11 +9,18 @@
 
 (function(exports){
 
-	var debug = function(str) { /*console.log("----------------\n" + str + "\n------------------");*/ }
+	var debug = function(str) { console.log("----------------\n" + str + "\n------------------"); }
 	var info = function(str) { console.log(" >>> " + str); }
 		
 	/**
 	 *  Masstransit servicebus
+	 *
+	 *	You can subscribe to two global events:
+	 *
+	 *		- ready				: gets triggered when the bus is ready to interact with the outside world.
+	 *		- message			: gets triggered when a message is received. Contains the message as a parameter.
+	 *		- connectionFailure	: gets triggered when the connection to the message broker fails. 
+	 *
 	 */
 	function Servicebus() {
 	
@@ -32,6 +39,10 @@
 		
 			configuration = config;
 			configuration.clientId =  Math.uuid().toLowerCase() ;
+	
+			// bubble-up disconnect event
+			transport.on('disconnect', function(){ this.trigger('disconnect','transport'); }, this);
+			subscriptionService.on('disconnect', function(){ this.trigger('disconnect', 'subscriptionService'); }, this);
 	
 			subscriptionService.on('ready', initializeTransport, this);
 			subscriptionService.init(config);
@@ -56,8 +67,10 @@
 		 *  Register a new subscription on the server and setup a local callback
 		 */			
 		function subscribe(messageName, callback) {
-			subscriptionService.addSubscription(messageName);			
-			this.on(formatMessageUrn(messageName), callback);
+			subscriptionService.addSubscription(messageName);	
+
+			if(callback != null) 
+				this.on(formatMessageUrn(messageName), callback);
 		}		
 		
 		/*
@@ -67,17 +80,12 @@
 		*/
 
 		/**
-		 *	Register a callback to be executed when the servicebus has been setup
-		 */
-		function ready(callback) {
-			this.on('ready', callback);
-		}
-
-		/**
 		 *	Trigger an local subscription associated with the receveid message.
 		 */
 		function deliver(env) {
 			info("message received:" + env.messageType[0])
+			
+			this.trigger('message', env.message);
 			this.trigger(env.messageType[0], env.message);
 		}
 		
@@ -85,8 +93,10 @@
 		 *	Converts an .net assemblyname to a MT urn format.
 		 */
 		function formatMessageUrn(messageName){
-			var parts = messageName.split(",");
-			return "urn:message:" + parts[0].replace(".",":");
+			var part = messageName.split(",")[0];
+			var lastDot = part.lastIndexOf('.');
+			part = part.substring(0, lastDot) +  ':' + part.substring(lastDot+1);
+			return "urn:message:" + part;
 		}
 				
 		EventEmitter.augment(Servicebus.prototype);
@@ -97,7 +107,6 @@
 		this.init = init;
 		this.subscribe = subscribe;
 		//this.publish = publish;
-		this.ready = ready;
 	}	
 	
 	/**
@@ -117,12 +126,16 @@
 			info("initializing subscription service")
 		
 			configuration = config;
-		
+
+			transport.on('disconnect', function(){ this.trigger('disconnect'); }, this);
 			transport.on('ready', addSubscriptionClient, this);
 			transport.on('message', messageReceived, this);	
 			transport.init(configuration.subscriptionService);
 		}
-
+		
+		/**
+		 *	Handles incomming messages
+		 */
 		function messageReceived(env){
 			if( (env.message.clientId == configuration.clientId && env.messageType[0].match("SubscriptionClientAdded$"))){
 				info("subscription service ready")
@@ -207,7 +220,7 @@
 			client.debug = debug;
 
 			var self = this;
-
+		
 			// connect to the broker
 			client.connect(null, null, function (frame) {
 				info("connected to Stomp server: " + host);
@@ -235,7 +248,7 @@
 							break;
 					}
 				}, { 'receipt': 'subscription-' + receiptId });
-			});
+			}, function(){ self.trigger("disconnect") });
 		}
 		
 		/**
