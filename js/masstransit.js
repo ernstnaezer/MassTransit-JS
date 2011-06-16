@@ -9,8 +9,10 @@
 
 (function(exports){
 
-	var debug = function(str) { console.log("----------------\n" + str + "\n------------------"); }
-	var info = function(str) { console.log(" >>> " + str); }
+	var _ = (typeof window === 'undefined') ? require('../nimble'): window._;
+	
+	var debug = function(str) { /*console.log("### ", str);*/ }
+	var info = function(str) { console.log(" --- ", str); }
 		
 	/**
 	 *  Masstransit servicebus
@@ -22,70 +24,75 @@
 	 *		- connectionFailure	: gets triggered when the connection to the message broker fails. 
 	 *
 	 */
-	function Servicebus() {
-	
-		var subscriptionService = new SubscriptionService();
-		var transport = new StompTransport();
-		var configuration;
-
-		EventEmitter.augment(transport);
+	function Servicebus(configuration) {
+		EventEmitter.augment(this);
 		
+		var self = this;
+		var subscriptionClient;
+		var transport;
+	
+		var stompTransportFactory = new StompTransportFactory();
+		var configuration = configuration;
+		
+		configuration.receiveFrom = new URI(configuration.receiveFrom);
+		configuration.subscriptionService  = new URI(configuration.subscriptionService);
+			
 		/**
 		 *  Initialize the servicebus by creating a subscription service and setting up message transports
 		 */
-		function init(config) {
+		function init() {
 		
 			info("initializing the servicebus")
-		
-			configuration = config;
-			configuration.clientId =  Math.uuid().toLowerCase() ;
-	
-			// bubble-up disconnect event
-			transport.on('disconnect', function(){ this.trigger('disconnect','transport'); }, this);
-			subscriptionService.on('disconnect', function(){ this.trigger('disconnect', 'subscriptionService'); }, this);
-	
-			subscriptionService.on('ready', initializeTransport, this);
-			subscriptionService.init(config);
-		}
 
-		/**
-		 *  Initialize message transport
-		 */		
-		function initializeTransport(){
-		
-			info("initializing message transport")
-			
-			transport.on('ready', function () {
-				info("message transport ready, triggering servicebus ready event")
-				this.trigger('ready'); 
-			}, this);
-			transport.on('message', deliver, this);		
-			transport.init(configuration.receiveFrom);
+			var subscriptionTransport = stompTransportFactory.buildOutbound( configuration.subscriptionService, function(serviceTransport){
+				info("outbound connection for subscription client ready");
+				
+				stompTransportFactory.buildInbound( configuration.receiveFrom, function(messageTransport){
+					info("message transport ready, subscribing new client");
+					
+					messageTransport.on('message', deliver, self);
+					transport = messageTransport;
+
+					// bubble-up disconnect event
+					messageTransport.on('disconnect', function(){ this.trigger('disconnect','messageTransport'); }, self);
+					serviceTransport.on('disconnect', function(){ this.trigger('disconnect','subscription client'); }, self);
+										
+					subscriptionClient = new SubscriptionClient(self, configuration, serviceTransport);					
+					subscriptionClient.once('ready', function(){ this.trigger('ready') }, self);
+					subscriptionClient.addSubscriptionClient();
+				});
+			});
 		}
 
 		/**
 		 *  Register a new subscription on the server and setup a local callback
 		 */			
 		function subscribe(messageName, callback) {
-			subscriptionService.addSubscription(messageName);	
+			info("subscribing to : " + messageName);
+			subscriptionClient.addSubscription(messageName);	
 
 			if(callback != null) 
 				this.on(formatMessageUrn(messageName), callback);
 		}		
-		
-		/*
-		function publish(messageType, message) { with(this){
-			transport.publish({messageType:messageType, message:message});
-		}}
-		*/
 
+		/**
+		 *  Publishes a message
+		 */				
+		function publish(messageType, message) {
+			_.each(subscriptionClient.getSubscriptions(), function(val){
+				if( formatMessageUrn(val.messageName) == messageType ){
+					stompTransportFactory.buildOutbound( new URI(val.endpointUri), function(transport){
+						transport.send({messageType:messageType, message:message});
+					});
+				}
+			});
+		}
+		
 		/**
 		 *	Trigger an local subscription associated with the receveid message.
 		 */
 		function deliver(env) {
-			info("message received:" + env.messageType[0])
-			
-			this.trigger('message', env.message);
+			info("trigger event: " + env.messageType[0])
 			this.trigger(env.messageType[0], env.message);
 		}
 		
@@ -98,70 +105,42 @@
 			part = part.substring(0, lastDot) +  ':' + part.substring(lastDot+1);
 			return "urn:message:" + part;
 		}
-				
-		EventEmitter.augment(Servicebus.prototype);
-				
+								
 		/**
  		 *	public function
 		 */
 		this.init = init;
 		this.subscribe = subscribe;
-		//this.publish = publish;
-	}	
+		this.publish = publish;
+	}
 	
 	/**
-	 *	Subscription service is used for registering a client and consumers on the server
+	 *	Subscription client is used for registering a client and consumers on the server
 	 */
-	function SubscriptionService(){
+	function SubscriptionClient(serviceBus, configuration, transport){
+		EventEmitter.augment(this);
+		
+		var configuration = configuration;
+		var subscriptions = [];
+		
+		serviceBus.on("urn:message:MassTransit.Services.Subscriptions.Messages:SubscriptionRefresh", consumeSubscriptionRefresh, this);
+		serviceBus.on("urn:message:MassTransit.Services.Subscriptions.Messages:RemoveSubscription",  consumeSubscriptionRemove, this);
+		serviceBus.on("urn:message:MassTransit.Services.Subscriptions.Messages:AddSubscription", 	 consumeSubscriptionAdd, this);
 	
-		var transport = new StompTransport();
-		var configuration;
-
-		EventEmitter.augment(transport);
-		
 		/**
-		 *	Initialized the subsciption service by registering a new client.
-		 */
-		function init(config){
-			info("initializing subscription service")
-		
-			configuration = config;
-
-			transport.on('disconnect', function(){ this.trigger('disconnect'); }, this);
-			transport.on('ready', addSubscriptionClient, this);
-			transport.on('message', messageReceived, this);	
-			transport.init(configuration.subscriptionService);
-		}
-		
-		/**
-		 *	Handles incomming messages
-		 */
-		function messageReceived(env){
-			if( (env.message.clientId == configuration.clientId && env.messageType[0].match("SubscriptionClientAdded$"))){
-				info("subscription service ready")
-				this.trigger("ready");
-			}		
-		}
-		
-		/**
-		 *	Registers a new client
+		 *	Registers a new client in the pool
 		 */
 		function addSubscriptionClient(){ 
 
-			info("adding a subscription client");
-		
-			var messageType = [
-				"urn:message:MassTransit.Services.Subscriptions.Messages:AddSubscriptionClient",
-				"urn:message:MassTransit.Services.Subscriptions.Messages:SubscriptionClientMessageBase"
-			];
-	
+			info("registering a new client in the pool");
+			
 			var message = {
-			    correlationId: configuration.clientId,
-				controlUri	 : configuration.receiveFrom,
-				dataUri		 : configuration.receiveFrom,
+			    correlationId: Math.uuid().toLowerCase(),
+				controlUri	 : configuration.receiveFrom.toString(),
+				dataUri		 : configuration.receiveFrom.toString(),
 			};
-
-			transport.publish({ messageType:messageType, message:message });
+			
+			transport.send({messageType:"urn:message:MassTransit.Services.Subscriptions.Messages:AddSubscriptionClient", message:message });
 		}
 
 		/**
@@ -171,100 +150,209 @@
 
 			info("adding a message consumer for: " + messageName);
 		
-			var messageType = [
-				"urn:message:MassTransit.Services.Subscriptions.Messages:AddSubscription",
-				"urn:message:MassTransit.Services.Subscriptions.Messages:SubscriptionChange"
-			];
-			
 			var message = {
 				subscription: {
 					clientId: configuration.clientId,
 					sequenceNumber: 1,
 					messageName: messageName,
-					endpointUri: configuration.receiveFrom,
+					endpointUri: configuration.receiveFrom.toString(),
 					subscriptionId: Math.uuid() }};
 
-			transport.publish({ messageType:messageType, message:message });
+			transport.send({ messageType:"urn:message:MassTransit.Services.Subscriptions.Messages:AddSubscription", message:message });
+		}
+		
+		/**
+		 *	Consume incomming subscription refresh messages
+		 */
+		function consumeSubscriptionRefresh(message){
+		
+			info("subscription refresh handling");
+		
+			_.each(message.subscriptions, function(val){
+				debug("subscription add: " + val.messageName + " from " + val.endpointUri);
+				// check for duplicates
+				if( _.filter(subscriptions, function(v){return v.subscriptionId == val.subscriptionId}).length == 0){
+					subscriptions.push(val);
+				}
+			});
+		
+			this.trigger('ready');
 		}
 
-		EventEmitter.augment(SubscriptionService.prototype);
+		/**
+		 *	Consume incomming subscription remove messages
+		 */
+		function consumeSubscriptionRemove(message){
+			info("subscription remove handling: " + message.subscription.messageName + " from " + message.subscription.endpointUri);
+			subscriptions = _.filter(subscriptions, function(v){ return v.subscriptionId != message.subscription.subscriptionId})
+		}
+
+		/**
+		 *	Consume incomming subscription add messages
+		 */
+		function consumeSubscriptionAdd(message){
+			info("subscription add handling: " + message.subscription.messageName + " from " + message.subscription.endpointUri);
+			if( _.filter(subscriptions, function(v){ return v.subscriptionId == message.subscription.subscriptionId}).length == 0)
+				subscriptions.push(message.subscription);
+		}
 		
-		this.init = init;	
+		/**
+		 *	Gets the list of subscriptions
+		 */
+		function getSubscriptions(){
+			return subscriptions;
+		}
+		
 		this.addSubscription = addSubscription;
+		this.addSubscriptionClient = addSubscriptionClient;
+		this.getSubscriptions = getSubscriptions;
 	}
 
-		/**
-	 *	Stomp transport communicates with a stomp broker message queue.
+	/**
+	 *	Builds Stomp transport, reused client connections.
 	 */
-	function StompTransport() {
-	
-		var serializer = new Serializer();
-		var address;
-		var queue;
-		var host;
-		var client;
-	
+	function StompTransportFactory(){
+
+		var clientCache = [];
+		var self = this;
+
 		/**
-		 *	Initialize a new Stomp transport channel.
-		 *   The given endpoint should match: stomp://[server]:[port]/queue
+		 *	Builds a connection for sending messages
+		 *
+		 * 	params: 
+		 *		Uri 	 address
+		 *		Function callback to be triggered when the client connected
 		 */
-		function init(endpoint) { 
+		function buildOutbound(address, readyCallback){
 		
-			// unpack the endpoint data
-			address = new URI(endpoint);
-			queue = address.getPath();
-			host = new URI(endpoint);
-			host.setScheme("ws");
-				
-			client = new Stomp.client(host);
+			var webSocketAddress = new URI(address.toString());
+			webSocketAddress.setScheme("ws");
+		
+			info("building outbound connection for: " + address)
+			
+			// prevent crash
+			if(!readyCallback) readyCallback = function(){};
+		
+			// check if we have a connection
+			var found;
+			_.filter(clientCache, function(val){
+				if(val.address.getAuthority() == webSocketAddress.getAuthority() ){
+					info("connection to " + webSocketAddress.getAuthority() + " found in cache");
+					found = true;
+					
+					var transport = new StompTransport(address, val.client)
+					
+					readyCallback( transport, val.client);
+				}
+			});
+			
+			if(found) return;
+		
+			info("connection to " + webSocketAddress.getAuthority() + " not found in cache, bulding");
+			
+			// build a new connection
+			var client = new Stomp.client(webSocketAddress);
+			
+			// inject event support
+			EventEmitter.augment(client);
+
 			client.debug = debug;
+			client.onreceive = function(msg) { console.log("BLAP") };
+			client.connect(null, null, function(){
 
-			var self = this;
+				// store the client in out connection cache
+				clientCache.push({address:webSocketAddress, client:client});
 		
-			// connect to the broker
-			client.connect(null, null, function (frame) {
-				info("connected to Stomp server: " + host);
+				var transport = new StompTransport(address, client)
+		
+				info("outbound connection ready: " + webSocketAddress);
+				
+				readyCallback(transport, client);
+			
+			}, function(){ client.trigger('disconnect'); });					
+		}
+		
+		/**
+		 *	Build a connection for receiving messages
+		 *
+		 * 	params: 
+		 *		Uri 	 address
+		 *		Function callback to be triggered when the client subscribed
+		 */	
+		function buildInbound(address, readyCallback){
 
+			if(!readyCallback) readyCallback = function(){};
+	
+			info("building inbound connection for :" + address);
+	
+			buildOutbound(address, function(transport, client){
+				
+				var queue = address.getPath();
 				var receiptId = Math.uuid();
+				
+				info("subscribing to: " + queue);
 				
 				// when we receive a receipt for the requested subscription, we are ready to go
 				client.onreceipt = function (message) {
 					if (message.headers['receipt-id'] == "subscription-" + receiptId) {
-						debug("subscription receipt received, we are ready to go");
-						self.trigger('ready');
+						readyCallback(transport);
 					}
 				}
-
-				info("subscribing to: " + queue);
-				// subscribe to the request queue
+				
+				// subscribe to the queue
 				client.subscribe(queue, function (message) {
-					debug("STOMP message received");
-
 					switch (message.command) {
 						// message dispatcher
 						case "MESSAGE":
-							debug("message body = " + message.body)
-							self.trigger('message', serializer.deserialize(message.body) );
+							client.trigger('message', message.body);
 							break;
 					}
 				}, { 'receipt': 'subscription-' + receiptId });
-			}, function(){ self.trigger("disconnect") });
+			});
+		}
+
+		this.buildOutbound = buildOutbound;
+		this.buildInbound  = buildInbound;
+	}
+	
+	/**
+	 *	Stomp transport communicates with a stomp broker message queue.
+	 *
+	 *	params:
+	 *		Uri			address
+	 *		StompClient	a connected STOMP client
+	 *
+	 */
+	function StompTransport(address, client) {
+		EventEmitter.augment(this);
+		
+		var serializer = new Serializer();
+		var address = address;
+		var client	= client;
+		
+		client.on('message', receive, this);
+				
+		/**
+		 *	Delivers the received message to anyone who is listening
+		 */
+		function receive(content){			
+			var message = serializer.deserialize(content)
+
+			// since we are sharing connections, we need to check that the received message is actualy for this transport
+			if( message.destinationAddress == address.toString()) this.trigger('message', message );
 		}
 		
 		/**
 		 *	Publishes the given message to the configured message queue
 		 */
-		function publish(msg){
-			info("publish to: " + queue);
-			client.send( queue, {}, serializer.serialize(msg) );
+		function send(msg){			
+			client.send( address.getPath(), {}, serializer.serialize(msg) );
 		}
 		
 		/**
  		 *	public function
 		 */
-		
-		this.init = init;
-		this.publish = publish;
+		this.send = send;
 	}
 
 	/**
@@ -289,10 +377,7 @@
 		this.serialize = serialize;
 		this.deserialize = deserialize;
 	}
-	
-	exports.Serializer = Serializer;
-	exports.StompTransport = StompTransport;
-	exports.SubscriptionService = SubscriptionService;
+
 	exports.Servicebus = Servicebus;
 
 })(typeof exports === 'undefined'? this['masstransit']={}: exports);

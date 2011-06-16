@@ -19,11 +19,13 @@
             CreateServiceBus();
 
             Console.WriteLine("ready... press enter to fire and 'exit' to stop");
-            
+
+            _serviceBus.SubscribeHandler<PongMessage>(x => Console.Out.WriteLine("x.Tag = {0}", x.Tag));
+
             while (Console.ReadLine() != "exit")
             {
                  _serviceBus.Publish(
-                            new PingMessage(),
+                            new PingMessage{Tag = DateTime.Now.ToString()},
                             contextCallback => contextCallback.IfNoSubscribers(
                                 message => Console.WriteLine("Make sure the browser is connected...")));
             }
@@ -77,5 +79,11 @@
 
     public class PingMessage
     {
+        public string Tag { get; set; }
+    }
+
+    public class PongMessage
+    {
+        public string Tag { get; set; }
     }
 }

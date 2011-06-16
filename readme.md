@@ -4,9 +4,10 @@ Masstransit javascript messaging using STOMP over Websockets.
 
 Introduction
 ------------
-MassTransit JS is a javascript implementation of the Masstransit messaging framework that bring this power to your browser. It provides a way to communicate with other MassTransit instances in your network via Stomp message brokering.
-
+MassTransit JS is a javascript implementation of the Masstransit messaging framework that bring this power to your browser (and node-js, but this hasn't been tested). It provides a way to communicate with other MassTransit instances in your network via Stomp message brokering.
 The library is written for a project I'm currently working on and to get a better understanding of the MassTransit internals. By no means is it complete at this stage! Please check the *todo section* for details.
+
+At this moment you can both receive message from a MassTransit instance on the net, send subsciption information and publish messages, but again, at a very early stage.
 
 Component stack
 ---------------------------
@@ -48,7 +49,9 @@ The following libraries are used to create the full stack
 * Math.uuid.js 				http://www.broofa.com
 * EventEmitter				http://github.com/pete-otaqui
 * uri.js					http://code.google.com/p/js-uri/
+* Nimble functions			http://caolan.github.com/nimble/
 * Ultralight Message Broker	http://github.com/enix/ultralight
+
 
 Things to do
 ------------
@@ -56,16 +59,10 @@ This project is in a very early 'hurray, it works!' state, so that means a lot c
 
 For example:
 
-* Currenly you can only receive messages in your browser! So you can not publish from your browser. As far as I know the subscribtion service inside MT publishes a list of subscription information that contains all that is needed to support this. These events need to be captured and need to find there way into the JS internals so we can have the same Publish loop, but this is something that needs to be look in.
-
 * Only the 'happy happy joy joy everything is alright' flow is implemented at this moment. That means poor error handling, no reconnect support, no healtmonitoring and everything you would like to see in mature software.
 	
 * You can not unsubscribe a message consumer.
 
-* We also open two websocket connections to the broker, but it looks they both receive multiple messages so this needs to be looked into as well.Perhaps we can reduced this to one connection by given the transport channels some TLC and refactoring.
-	
-* Delivered message contain a differnt namespace notation that is converted quick and dirty to support the demo.
-	
 * .... and most likely a ton of other things
 	
 License
