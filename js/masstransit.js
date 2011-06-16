@@ -79,8 +79,10 @@
 		 *  Publishes a message
 		 */				
 		function publish(messageType, message) {
+			info("searching for a subscription for: " + messageType);
 			_.each(subscriptionClient.getSubscriptions(), function(val){
 				if( formatMessageUrn(val.messageName) == messageType ){
+					info("found");
 					stompTransportFactory.buildOutbound( new URI(val.endpointUri), function(transport){
 						transport.send({messageType:messageType, message:message});
 					});
@@ -169,7 +171,7 @@
 			info("subscription refresh handling");
 		
 			_.each(message.subscriptions, function(val){
-				debug("subscription add: " + val.messageName + " from " + val.endpointUri);
+				info("subscription add: " + val.messageName + " from " + val.endpointUri);
 				// check for duplicates
 				if( _.filter(subscriptions, function(v){return v.subscriptionId == val.subscriptionId}).length == 0){
 					subscriptions.push(val);
@@ -343,7 +345,7 @@
 		}
 		
 		/**
-		 *	Publishes the given message to the configured message queue
+		 *	Sends the given message to the configured message queue
 		 */
 		function send(msg){			
 			client.send( address.getPath(), {}, serializer.serialize(msg) );
