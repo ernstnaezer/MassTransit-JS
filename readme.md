@@ -4,13 +4,47 @@ Masstransit javascript messaging using STOMP over Websockets.
 
 Introduction
 ------------
-MassTransit JS is a javascript implementation of the Masstransit messaging framework that bring this power to your browser (and node-js, but this hasn't been tested). It provides a way to communicate with other MassTransit instances in your network via Stomp message brokering.
-The library is written for a project I'm currently working on and to get a better understanding of the MassTransit internals. By no means is it complete at this stage! Please check the *todo section* for details.
+MassTransit JS is a javascript implementation of the Masstransit messaging framework. It provides a way to communicate with other MassTransit instances in your network via Stomp message brokering. 
 
 At this moment you can both receive message from a MassTransit instance on the net, send subsciption information and publish messages, but again, at a very early stage.
 
+Configuration
+-------------
+The code is designed to run both inside a web browser and via node-js. Each of them do requires a (little) different configration approche.
+
+*node-js*
+In node-js you have the advantage of being able to require just the package file and specify which transport you want to use via the scheme in the configuration object.
+	
+	var ServiceBus = require("masstransit-js").Servicebus;
+
+	var bus = new ServiceBus({
+		receiveFrom : "stomp://localhost:8181/client",
+		subscriptionService: "stomp://localhost:8181/subscription",
+		transport :'stomp'
+	});
+
+*browser*
+Everything is packed into one big JS file so running from a browser should equal the node-js version pretty close.
+
+	<html>
+    	<script type="text/javascript" src="./masstransit.js"></script>
+	
+		<script>
+			var bus = new ServiceBus({
+				receiveFrom : "stomp://localhost:8181/client",
+				subscriptionService: "stomp://localhost:8181/subscription",
+				transport :'stomp'
+			});
+		</script>
+	</html>
+	
+Logging
+-------
+To enable logging you need to specify the output destination. 
+
+	
 Component stack
----------------------------
+---------------
 The project currently relies on a Stomp broker that communicates via websockets, both serverside as well as in your browser. This means it will run in browsers like Chrome, Safari and recent Firefox builds.
 
 Communication between your C# application and a browser application in done via component stack:

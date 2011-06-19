@@ -5,3 +5,4 @@
 /net/MassTransit.Transports.UltralightStomp/_ReSharper.MassTransit.Transports.UltralightStomp
 /net/MassTransit.Transports.UltralightStomp/bin
 /net/MassTransit.Transports.UltralightStomp/obj
+.DS_Store

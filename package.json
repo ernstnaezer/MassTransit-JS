@@ -1,0 +1,25 @@
+{
+    "name" : "masstransit-js",
+    "version" : "0.0.1",
+    "description" : "A javascript message bus that talks MassTransit slang.",
+    "main" : "./index.js",
+    "repository" : {
+        "type" : "git",
+        "url" : "git@github.com:enix/MassTransit-JS.git"
+    },
+    "dependencies" : {
+		 "websocket-client": ">= 1.0.0",
+		 "nimble": ">= 0.0.2",
+		 "node-uuid": ">=1.1.0"
+    },
+    "keywords" : [
+        "esb",
+        "web socket",
+        "masstransit",
+        "message bus",
+        ".net"
+    ],
+    "author" : "Ernst Naezer <ernstnaezer@gmail.com>",
+    "license" : "Apache 2.0",
+    "engine" : { "node" : "~0.4.5" }
+}
