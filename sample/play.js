@@ -1,8 +1,8 @@
 var ServiceBus = require("../index").Servicebus;
 
 var bus = new ServiceBus({
-	receiveFrom : "stomp://nawa:61614/stomp/client",
-	subscriptionService: "stomp://nawa:61614/stomp/client",
+	receiveFrom : "stomp://nawa:61614/jms.queue.nodejs",
+	subscriptionService: "stomp://nawa:61614/mt_subscriptions",
 	transport :'stomp'
 });
 
