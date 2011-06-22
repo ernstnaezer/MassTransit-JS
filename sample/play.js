@@ -7,7 +7,7 @@ var bus = new ServiceBus({
 });
 
 bus.on('ready', function(){
-	console.log("we are ready for departure!");
+	console.log("we are ready for departure!");	
 })
 
 bus.on('disconnect', function(source){

@@ -13,8 +13,9 @@ Setting up the broker
 ---------------------
 For the message broker in this demo we'll be using ActiveMQ for it's ease of configuration.
 
-* make sure you have java installed on the machine (you can get it running with: sudo apt-get install default-jre-headless)
-* get a copy of the [ActiveMq](https://activemq.apache.org/) message broker. This demo is build using version 5.5.0
+* You need to have java installed on the machine (you can get it running with: sudo apt-get install default-jre-headless)
+* get a copy of the [ActiveMq](https://activemq.apache.org/) message broker. 
+	*important:* ActiveMQ build 5.5 contains a very nasty bug where the stomp body received over a websocket connection is truncated! Make sure you get a fresh snapshot of their 5.6 tree.ac
 * untar the fresh download 
 * and edit *./conf/activemq.xml*
 * find the *transportConnectors* section and make it look like this
