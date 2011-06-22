@@ -15,9 +15,11 @@ For the message broker in this demo we'll be using ActiveMQ for it's ease of con
 
 * You need to have java installed on the machine (you can get it running with: sudo apt-get install default-jre-headless)
 * get a copy of the [ActiveMq](https://activemq.apache.org/) message broker. 
-	*important:* ActiveMQ build 5.5 contains a very nasty bug where the stomp body received over a websocket connection is truncated! Make sure you get a fresh snapshot of their 5.6 tree.ac
-* untar the fresh download 
-* and edit *./conf/activemq.xml*
+
+	*important:* ActiveMQ build 5.5 contains a very nasty bug where the stomp body received over a websocket connection is truncated! Make sure you get a fresh snapshot of their 5.6 tree.
+
+* untar the download 
+* edit *./conf/activemq.xml*
 * find the *transportConnectors* section and make it look like this
 
  	<transportConnectors>
@@ -39,6 +41,5 @@ Last, but certainly not least, we'll setup te Mac running the nodeJS application
 * make sure you have nodeJs installed on the machine, for a howto see (devpatch)[http://www.devpatch.com/2010/02/installing-node-js-on-os-x-10-6/]
 * edit the included sample.js application and edit the *[server_ip]* part to match the address of the ubuntu box
 * start the included sample app by running *node ./sample.js*
-
 
 
