@@ -1,6 +1,6 @@
-var ServiceBus = require("../../index").Servicebus;
+var Servicebus = require("masstransit-js").Servicebus;
 
-var serviceBus = new ServiceBus({
+var serviceBus = new Servicebus({
 	receiveFrom : "stomp://nawa:61614/queue/nodejs",
 	subscriptionService: "stomp://nawa:61614/queue/mt_subscriptions",
 	transport :'stomp'
