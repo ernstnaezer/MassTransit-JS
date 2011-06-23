@@ -28,8 +28,8 @@ In node-js you have the advantage of being able to require just the package file
 	var Servicebus = require("masstransit-js").Servicebus;
 
 	var serviceBus = new Servicebus({
-		receiveFrom : "stomp://nawa:61614/queue/nodejs",
-		subscriptionService: "stomp://nawa:61614/queue/mt_subscriptions",
+		receiveFrom : "stomp://localhost:61614/queue/nodejs",
+		subscriptionService: "stomp://localhost:61614/queue/mt_subscriptions",
 		transport :'stomp'
 	});
 	
@@ -40,8 +40,8 @@ At this moment you have to include a lot of file... see the BrowserApp for all t
 	
 		<script>
 			var serviceBus = new masstransit.Servicebus({ 
-				receiveFrom: "stomp://nawa:61614/queue/client", 
-				subscriptionService: "stomp://nawa:61614/queue/mt_subscriptions",
+				receiveFrom: "stomp://localhost:61614/queue/client", 
+				subscriptionService: "stomp://localhost:61614/queue/mt_subscriptions",
 				transport: "stomp" });					
 		</script>
 	</html>

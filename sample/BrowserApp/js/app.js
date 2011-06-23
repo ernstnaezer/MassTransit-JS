@@ -6,8 +6,8 @@
 	$(function() {
 		
 		var serviceBus = new masstransit.Servicebus({ 
-			receiveFrom: "stomp://nawa:61614/queue/client", 
-			subscriptionService: "stomp://nawa:61614/queue/mt_subscriptions",
+			receiveFrom: "stomp://localhost:61614/queue/client", 
+			subscriptionService: "stomp://localhost:61614/queue/mt_subscriptions",
 			transport: "stomp" });
 					
 		serviceBus.on('ready',function(){

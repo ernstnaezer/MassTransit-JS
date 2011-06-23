@@ -1,8 +1,8 @@
 var Servicebus = require("masstransit-js").Servicebus;
 
 var serviceBus = new Servicebus({
-	receiveFrom : "stomp://nawa:61614/queue/nodejs",
-	subscriptionService: "stomp://nawa:61614/queue/mt_subscriptions",
+	receiveFrom : "stomp://localhost:61614/queue/nodejs",
+	subscriptionService: "stomp://localhost:61614/queue/mt_subscriptions",
 	transport :'stomp'
 });
 
