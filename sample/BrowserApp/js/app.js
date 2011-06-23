@@ -5,7 +5,7 @@
 	 */
 	$(function() {
 		
-		var serviceBus = new masstransit.Servicebus({ receiveFrom: "stomp://localhost:8181/client", subscriptionService: "stomp://localhost:8181/subscriptions" });
+		var serviceBus = new masstransit.Servicebus({ receiveFrom: "stomp://localhost:61614/queue/client", subscriptionService: "stomp://localhost:61614/queue/mt_subscriptions" });
 		serviceBus.init();
 		
 		serviceBus.on('ready',function(){

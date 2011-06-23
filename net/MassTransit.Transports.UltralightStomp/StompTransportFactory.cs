@@ -14,58 +14,130 @@
 namespace MassTransit.Transports.UltralightStomp
 {
     using System;
+    using System.Collections.Concurrent;
     using Exceptions;
+    using log4net;
+    using Magnum.Extensions;
+    using Magnum.Threading;
     using Ultralight.Client;
 
     public class StompTransportFactory : ITransportFactory
     {
-        #region ITransportFactory Members
+        readonly static ILog Log = LogManager.GetLogger(typeof(StompTransportFactory));
+        readonly ReaderWriterLockedDictionary<Uri, StompClient> _connectionCache = new ReaderWriterLockedDictionary<Uri, StompClient>();
+       
+        bool _disposed;
 
+        /// <summary>
+        /// Gets the scheme.
+        /// </summary>
         public string Scheme
         {
-            get { return "stomp"; }
+            get
+            {
+                return "stomp";
+            }
         }
 
+        /// <summary>
+        /// Builds the loopback.
+        /// </summary>
+        /// <param name="settings">The settings.</param>
+        /// <returns></returns>
         public IDuplexTransport BuildLoopback(ITransportSettings settings)
         {
-            EnsureProtocolIsCorrect(settings.Address.Uri);
-
             var client = GetConnection(settings.Address);
             return new StompTransport(settings.Address, client);
         }
 
+        /// <summary>
+        /// Builds the inbound.
+        /// </summary>
+        /// <param name="settings">The settings.</param>
+        /// <returns></returns>
         public IInboundTransport BuildInbound(ITransportSettings settings)
         {
             return BuildLoopback(settings);
         }
 
+        /// <summary>
+        /// Builds the outbound.
+        /// </summary>
+        /// <param name="settings">The settings.</param>
+        /// <returns></returns>
         public IOutboundTransport BuildOutbound(ITransportSettings settings)
         {
             return BuildLoopback(settings);
         }
 
+        /// <summary>
+        /// Builds the error.
+        /// </summary>
+        /// <param name="settings">The settings.</param>
+        /// <returns></returns>
         public IOutboundTransport BuildError(ITransportSettings settings)
         {
             return BuildLoopback(settings);
         }
 
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
         public void Dispose()
         {
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
+        public void Dispose(bool disposing){
+            
+            if (_disposed) return;
+            
+            if (disposing)
+            {
+                _connectionCache.Values.Each(x =>
+                {
+                    try
+                    {
+                        if (x.IsConnected)
+                            x.Disconnect();
+
+                        x.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warn("Failed to close Stomp connection.", ex);
+                    }
+                });
+            }
+
+            _disposed = true;
         }
 
-        #endregion
-
-        private static StompClient GetConnection(IEndpointAddress address)
+        /// <summary>
+        /// Gets the connection.
+        /// </summary>
+        /// <param name="address">The address.</param>
+        /// <returns></returns>
+        private  StompClient GetConnection(IEndpointAddress address)
         {
-            Uri wsAddress = new UriBuilder("ws", address.Uri.Host, address.Uri.Port).Uri;
-            var client = new StompClient();
-            client.Connect(wsAddress);
+            EnsureProtocolIsCorrect(address.Uri);
 
-            client.Subscribe(address.Uri.PathAndQuery);
+            var serverAddress = new UriBuilder("ws", address.Uri.Host, address.Uri.Port).Uri;
 
-            return client;
+            return _connectionCache
+                .Retrieve(address.Uri, () =>
+                                             {
+                                                 var client = new StompClient();
+                                                 client.Connect(serverAddress);
+                                                 return client;
+                                             });
         }
 
+        /// <summary>
+        /// Ensures the protocol is correct.
+        /// </summary>
+        /// <param name="address">The address.</param>
         private void EnsureProtocolIsCorrect(Uri address)
         {
             if (address.Scheme != Scheme)
