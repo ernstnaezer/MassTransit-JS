@@ -37,6 +37,7 @@ In node-js you have the advantage of being able to require just the package file
 *browser*
 
 At this moment you have to include a lot of file... see the BrowserApp for all the details, but after that the configuration is pretty much the same.
+
 	<html>
     	<script type="text/javascript" src="./masstransit.js"></script>
 	
@@ -84,11 +85,9 @@ Three PC demo
 =============
 This section describes a demo setup between three machines all running different parts of the system.
 
-M1: a server box running Ubuntu 11.04, this will be our Stomp message broker
-
-M2: a Windows XP machine, this well run the MassTransit server hosting the subscription service
-
-M3: A Macbook running Snow Leopard 10.6.7, this will run masstransit-js inside a nodeJs application
+* M1: a server box running Ubuntu 11.04, this will be our Stomp message broker
+* M2: a Windows XP machine, this well run the MassTransit server hosting the subscription service
+* M3: A Macbook running Snow Leopard 10.6.7, this will run masstransit-js inside a nodeJs application
 
 Please note that the order of starting these applications is important. ActiveMQ need to run first, after that you start the MassTransit PC version and then you fire up the nodeJs sample. This is because the javascript version of MT is a client and it connects to a subscription service for it's information. Since ActiveMQ isn't configured as durable messages get lost when the subscription service isn't running and the demo won't work.
 
@@ -105,16 +104,16 @@ For the message broker in this demo we'll be using ActiveMQ for it's ease of con
 
 * untar the download 
 * edit *./conf/activemq.xml*
-* find the *transportConnectors* section and make it look like this
+* find the *transportConnectors* section
+
+You should add the websocket part so it looks like this:
 
  	<transportConnectors>
-        <transportConnector name="openwire" uri="tcp://0.0.0.0:61616"/>
-        <transportConnector name="websocket" uri="ws://0.0.0.0:61614"/>
-    </transportConnectors>
-	
-* start the server by running *./bin/activemq start*
+ 		<transportConnector name="openwire" uri="tcp://0.0.0.0:61616"/>
+ 		<transportConnector name="websocket" uri="ws://0.0.0.0:61614"/>
+ 	</transportConnectors>
 
-Your server should be up and running by now.
+start the server by running *./bin/activemq start* 
 
 Setting up the PC
 -----------------
