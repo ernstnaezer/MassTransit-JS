@@ -14,7 +14,7 @@ Right now the only way to install is by cloning from git
 
 	git clone git://github.com/enix/MassTransit-JS.git
 	
-If you want to run the nodeJs version of the code you have to install run 
+If you want to run the nodeJs version of the code you have to run 
 
 	npm install
 	
@@ -23,6 +23,7 @@ from the directory that you've cloned the code into. That should be it.
 Configuration
 -------------
 *node-js*
+
 In node-js you have the advantage of being able to require just the package file and specify which transport you want to use via the scheme in the configuration object.
 
 	var Servicebus = require("masstransit-js").Servicebus;
@@ -34,6 +35,7 @@ In node-js you have the advantage of being able to require just the package file
 	});
 	
 *browser*
+
 At this moment you have to include a lot of file... see the BrowserApp for all the details, but after that the configuration is pretty much the same.
 	<html>
     	<script type="text/javascript" src="./masstransit.js"></script>
@@ -48,13 +50,13 @@ At this moment you have to include a lot of file... see the BrowserApp for all t
 	
 Logging
 -------
-By default we log to the console. Please modify the debug and info functions of the Logger to suite your needs.
+By default we log to the console. Please modify the debug and info functions to suite your needs.
 
 Component stack
 ---------------
 The project currently relies on a Stomp broker that communicates via websockets, both serverside as well as in your browser. This means it will run in browsers like Chrome, Safari and recent Firefox builds.
 
-Communication between your C# application and a browser application in done via component stack:
+Communication between your C# application and a browser application in done via the following component stack:
 
 	Your server application				|
 		> MassTransit .Net				| all in C#
@@ -72,7 +74,7 @@ Communication between your C# application and a browser application in done via 
 
 Internals
 ---------
-The Javascript version loosly follows the .net implementation in it's naming and (very) general setup.There is a main object called ServiceBus that allows you to publish messages and subscribe consumers.
+The Javascript version loosly follows the .net implementation in it's naming and (very) general setup.There is a main object called Servicebus that allows you to publish messages and subscribe consumers.
 
 Next to that there is the SubsriptionService which is used to register a new client and tell the world there is a new consumer available on the network. The StompTransport is used to talk to the Stomp client and notifies the bus when there is a new message available. This is it differs somewhat from the .net version, we assume an active client and rely on a 'push' model to kick-off the message delivery.
 
@@ -83,7 +85,9 @@ Three PC demo
 This section describes a demo setup between three machines all running different parts of the system.
 
 M1: a server box running Ubuntu 11.04, this will be our Stomp message broker
+
 M2: a Windows XP machine, this well run the MassTransit server hosting the subscription service
+
 M3: A Macbook running Snow Leopard 10.6.7, this will run masstransit-js inside a nodeJs application
 
 Please note that the order of starting these applications is important. ActiveMQ need to run first, after that you start the MassTransit PC version and then you fire up the nodeJs sample. This is because the javascript version of MT is a client and it connects to a subscription service for it's information. Since ActiveMQ isn't configured as durable messages get lost when the subscription service isn't running and the demo won't work.
