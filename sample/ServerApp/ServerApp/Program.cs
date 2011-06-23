@@ -1,6 +1,22 @@
-﻿namespace ServerApp
+﻿// Copyright 2011 Ernst Naezer, et. al.
+//  
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use 
+// this file except in compliance with the License. You may obtain a copy of the 
+// License at 
+// 
+//     http://www.apache.org/licenses/LICENSE-2.0 
+// 
+// Unless required by applicable law or agreed to in writing, software distributed 
+// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
+// CONDITIONS OF ANY KIND, either express or implied. See the License for the 
+// specific language governing permissions and limitations under the License.
+
+namespace ServerApp
 {
     using System;
+    using System.IO;
+    using log4net.Config;
+    using Magnum.Extensions;
     using MassTransit;
     using MassTransit.Saga;
     using MassTransit.Services.Subscriptions.Server;
@@ -10,60 +26,59 @@
 
     internal class Program
     {
-        private static IServiceBus _serviceBus;
+        private const string Protocol = "stomp://localhost:61614/queue";
 
         private static void Main(string[] args)
         {
+            XmlConfigurator.Configure(new FileInfo("runner.log4net.xml"));
+
+            // comment me to use an external stomp broker
             StartWebsocketServer();
+
             StartSubscriptionService();
-            CreateServiceBus();
+
+            Console.Out.WriteLine("starting the servicebus");
+            var serviceBus = ServiceBusFactory
+                .New(sbc =>
+                         {
+                             sbc.ReceiveFrom("{0}/server".FormatWith(Protocol));
+                             sbc.UseStomp();
+                             sbc.UseJsonSerializer();
+
+                             sbc.Subscribe(s => s.Handler<PongMessage>(x => Console.Out.WriteLine("x.Tag = {0}", x.Tag)));
+                             sbc.UseSubscriptionService("{0}/mt_subscriptions".FormatWith(Protocol));
+                         });
 
             Console.WriteLine("ready... press enter to fire and 'exit' to stop");
 
-            _serviceBus.SubscribeHandler<PongMessage>(x => Console.Out.WriteLine("x.Tag = {0}", x.Tag));
-
             while (Console.ReadLine() != "exit")
             {
-                 _serviceBus.Publish(
-                            new PingMessage{Tag = DateTime.Now.ToString()},
-                            contextCallback => contextCallback.IfNoSubscribers(
-                                message => Console.WriteLine("Make sure the browser is connected...")));
+                serviceBus.Publish(
+                    new PingMessage {Tag = DateTime.Now.ToString()},
+                    contextCallback => contextCallback.IfNoSubscribers(
+                        message => Console.WriteLine("Make sure the browser is connected...")));
             }
-        }
-
-        private static void CreateServiceBus()
-        {
-            Console.Out.WriteLine("starting the servicebus");
-
-            _serviceBus = ServiceBusFactory
-                .New(sbc =>
-                         {
-                             sbc.ReceiveFrom("stomp://localhost:8181/server");
-                             sbc.UseStomp();
-                             sbc.UseJsonSerializer();
-                             
-                             sbc.UseSubscriptionService("stomp://localhost:8181/subscriptions");
-                         });
         }
 
         private static void StartSubscriptionService()
         {
             Console.Out.WriteLine("starting the subscription service");
 
+            var subscriptionSagaRepository = new InMemorySagaRepository<SubscriptionSaga>();
+            var clientSagaRepository = new InMemorySagaRepository<SubscriptionClientSaga>();
+
             var serviceBus =
                 ServiceBusFactory.New(sbc =>
                                           {
                                               sbc.UseStomp();
-                                              sbc.UseJsonSerializer();
 
-                                              sbc.ReceiveFrom("stomp://localhost:8181/subscriptions");
+                                              sbc.UseJsonSerializer();
+                                              sbc.ReceiveFrom("{0}/mt_subscriptions".FormatWith(Protocol));
+                                              sbc.SetConcurrentConsumerLimit(1);
                                           });
 
-            var subscriptionService =
-                new SubscriptionService(serviceBus,
-                                        new InMemorySagaRepository<SubscriptionSaga>(),
-                                        new InMemorySagaRepository<SubscriptionClientSaga>());
-
+            var subscriptionService = new SubscriptionService(serviceBus, subscriptionSagaRepository,
+                                                              clientSagaRepository);
             subscriptionService.Start();
         }
 
@@ -71,7 +86,7 @@
         {
             Console.Out.WriteLine("starting the websockets service");
 
-            var wsListener = new StompWsListener(new Uri("ws://localhost:8181/"));
+            var wsListener = new StompWsListener(new Uri("ws://localhost:61614/"));
             var server = new StompServer(wsListener);
             server.Start();
         }

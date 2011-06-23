@@ -18,36 +18,46 @@ namespace MassTransit.Transports.UltralightStomp
     using System.IO;
     using System.Text;
     using Context;
+    using Ultralight;
     using Ultralight.Client;
+    using Util;
 
     public class StompTransport : TransportBase
     {
-        private readonly StompClient _client;
-        private readonly ConcurrentQueue<string> _messages = new ConcurrentQueue<string>();
+        private readonly ConcurrentQueue<StompMessage> _messages = new ConcurrentQueue<StompMessage>();
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="StompTransport"/> class.
+        ///   Initializes a new instance of the <see cref = "StompTransport" /> class.
         /// </summary>
-        /// <param name="address">The address.</param>
-        /// <param name="client">The client.</param>
+        /// <param name = "address">The address.</param>
+        /// <param name = "client">The client.</param>
         public StompTransport(IEndpointAddress address, StompClient client)
             : base(address)
         {
-            _client = client;
-            _client.OnMessage = msg => _messages.Enqueue(msg.Body);
+            StompClient = client;
+            StompClient.OnMessage += msg => _messages.Enqueue(msg);
         }
+
+        /// <summary>
+        /// Gets the stomp client.
+        /// </summary>
+        public StompClient StompClient { get; private set; }
 
         public override void Receive(Func<IReceiveContext, Action<IReceiveContext>> callback, TimeSpan timeout)
         {
             GuardAgainstDisposed();
 
-            string message;
+            StompMessage message;
             if (!_messages.TryDequeue(out message))
                 return;
 
-            using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(message)))
+            using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(message.Body)))
             {
                 var context = new ConsumeContext(ms);
+                context.SetMessageId(message["id"]);
+
+                if (SpecialLoggers.Messages.IsInfoEnabled)
+                    SpecialLoggers.Messages.InfoFormat("RECV:{0}:{1}", Address, context.MessageId);
 
                 using (ContextStorage.CreateContextScope(context))
                 {
@@ -56,6 +66,11 @@ namespace MassTransit.Transports.UltralightStomp
                     if (receive != null)
                     {
                         receive(context);
+                    }
+                    else
+                    {
+                        if (SpecialLoggers.Messages.IsInfoEnabled)
+                            SpecialLoggers.Messages.InfoFormat("SKIP:{0}:{1}", Address, context.MessageId);
                     }
                 }
             }
@@ -70,13 +85,13 @@ namespace MassTransit.Transports.UltralightStomp
                 context.SerializeTo(body);
 
                 var msg = Encoding.UTF8.GetString(body.ToArray());
-                _client.Send(Address.Uri.PathAndQuery, msg);
+                StompClient.Send(Address.Uri.PathAndQuery, msg);
             }
         }
 
         protected override void OnDisposing()
         {
-            //_client.Disconnect();
+            if (StompClient != null) StompClient.Disconnect();
         }
     }
 }

@@ -19,6 +19,11 @@ namespace MassTransit.Transports.UltralightStomp
     {
         public static ServiceBusConfigurator UseStomp(this ServiceBusConfigurator configurator)
         {
+            var busConfigurator = new PostCreateBusBuilderConfiguratorImpl(
+                bus => bus.AddService(BusServiceLayer.Network, new StompSubscriptionService()));
+
+            configurator.AddBusConfigurator(busConfigurator);
+
             return configurator.AddTransportFactory<StompTransportFactory>();
         }
     }
