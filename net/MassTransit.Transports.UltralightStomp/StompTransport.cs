@@ -17,6 +17,7 @@ namespace MassTransit.Transports.UltralightStomp
     using System.Collections.Concurrent;
     using System.IO;
     using System.Text;
+    using System.Threading;
     using Context;
     using Ultralight;
     using Ultralight.Client;
@@ -46,6 +47,9 @@ namespace MassTransit.Transports.UltralightStomp
         public override void Receive(Func<IReceiveContext, Action<IReceiveContext>> callback, TimeSpan timeout)
         {
             GuardAgainstDisposed();
+
+            // since polling is very fast we need to relax the receive thread a bit
+            Thread.Sleep(500);
 
             StompMessage message;
             if (!_messages.TryDequeue(out message))
