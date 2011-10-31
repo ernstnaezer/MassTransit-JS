@@ -36,22 +36,19 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Fleck">
-      <HintPath>..\..\..\net\libs\Fleck.dll</HintPath>
+      <HintPath>..\libs\Fleck.dll</HintPath>
     </Reference>
     <Reference Include="log4net">
-      <HintPath>..\..\..\net\libs\log4net.dll</HintPath>
+      <HintPath>..\libs\log4net.dll</HintPath>
     </Reference>
     <Reference Include="Magnum">
-      <HintPath>..\..\..\net\libs\Magnum.dll</HintPath>
+      <HintPath>..\libs\Magnum.dll</HintPath>
     </Reference>
     <Reference Include="MassTransit">
-      <HintPath>..\..\..\net\libs\MassTransit.dll</HintPath>
+      <HintPath>..\libs\MassTransit.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\..\..\net\libs\Newtonsoft.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="Stact">
-      <HintPath>..\..\..\net\libs\Stact.dll</HintPath>
+    <Reference Include="MassTransit.Transports.Stomp">
+      <HintPath>..\libs\MassTransit.Transports.Stomp.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -61,16 +58,14 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="Ultralight, Version=1.0.0.0, Culture=neutral, processorArchitecture=x86">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\net\libs\Ultralight.dll</HintPath>
+    <Reference Include="Ultralight">
+      <HintPath>..\libs\Ultralight.dll</HintPath>
     </Reference>
-    <Reference Include="Ultralight.Client, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\net\libs\Ultralight.Client.dll</HintPath>
+    <Reference Include="Ultralight.Client">
+      <HintPath>..\libs\Ultralight.Client.dll</HintPath>
     </Reference>
     <Reference Include="websocket-sharp">
-      <HintPath>..\..\..\net\libs\websocket-sharp.dll</HintPath>
+      <HintPath>..\libs\websocket-sharp.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -79,12 +74,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\net\MassTransit.Transports.UltralightStomp\MassTransit.Transports.UltralightStomp.csproj">
-      <Project>{C547A1A0-F081-4351-B2FF-8382F4A5CEAE}</Project>
-      <Name>MassTransit.Transports.UltralightStomp</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Content Include="runner.log4net.xml">

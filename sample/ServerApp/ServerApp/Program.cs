@@ -15,18 +15,18 @@ namespace ServerApp
 {
     using System;
     using System.IO;
+    using MassTransit.Transports.Stomp;
     using log4net.Config;
     using Magnum.Extensions;
     using MassTransit;
     using MassTransit.Saga;
     using MassTransit.Services.Subscriptions.Server;
-    using MassTransit.Transports.UltralightStomp;
     using Ultralight;
     using Ultralight.Listeners;
 
     internal class Program
     {
-        private const string Protocol = "stomp://localhost:61614/queue";
+        private const string Host = "stomp://localhost:61614/queue";
 
         private static void Main(string[] args)
         {
@@ -41,12 +41,13 @@ namespace ServerApp
             var serviceBus = ServiceBusFactory
                 .New(sbc =>
                          {
-                             sbc.ReceiveFrom("{0}/server".FormatWith(Protocol));
+                             sbc.ReceiveFrom("{0}/server".FormatWith(Host));
                              sbc.UseStomp();
-                             sbc.UseJsonSerializer();
 
-                             sbc.Subscribe(s => s.Handler<PongMessage>(x => Console.Out.WriteLine("x.Tag = {0}", x.Tag)));
-                             sbc.UseSubscriptionService("{0}/mt_subscriptions".FormatWith(Protocol));
+                             sbc.UseSubscriptionService("{0}/mt_subscriptions".FormatWith(Host));
+                             sbc.UseControlBus();
+
+                             sbc.Subscribe(s => s.Handler<PongMessage>(x => Console.Out.WriteLine("x.Tag = {0}", x.Tag)));                             
                          });
 
             Console.WriteLine("ready... press enter to fire and 'exit' to stop");
@@ -55,8 +56,7 @@ namespace ServerApp
             {
                 serviceBus.Publish(
                     new PingMessage {Tag = DateTime.Now.ToString()},
-                    contextCallback => contextCallback.IfNoSubscribers(
-                        message => Console.WriteLine("Make sure the browser is connected...")));
+                    contextCallback => contextCallback.IfNoSubscribers( () => Console.WriteLine("Make sure the browser is connected...")));
             }
         }
 
@@ -72,8 +72,7 @@ namespace ServerApp
                                           {
                                               sbc.UseStomp();
 
-                                              sbc.UseJsonSerializer();
-                                              sbc.ReceiveFrom("{0}/mt_subscriptions".FormatWith(Protocol));
+                                              sbc.ReceiveFrom("{0}/mt_subscriptions".FormatWith(Host));
                                               sbc.SetConcurrentConsumerLimit(1);
                                           });
 
