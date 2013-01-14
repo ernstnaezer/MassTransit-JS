@@ -6,3 +6,4 @@
 /net/MassTransit.Transports.UltralightStomp/bin
 /net/MassTransit.Transports.UltralightStomp/obj
 .DS_Store
+node_modules/
