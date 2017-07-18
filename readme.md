@@ -1,3 +1,5 @@
+[Project Stage: DEPRECATED](https://img.shields.io/badge/Project%20Stage-%20!%20DEPRECATED%20%20%20!-ff0000.svg)
+
 MassTransit JS
 ==============
 Masstransit javascript messaging using STOMP over Websockets.
